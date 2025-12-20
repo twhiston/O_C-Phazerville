@@ -17,6 +17,7 @@ class ReverbApplet : public HemisphereAudioApplet {
         }
         void Unload() override {
           if (reverb) ReleaseFreeverb(reverb);
+          reverb = nullptr;
           AllowRestart();
         }
 

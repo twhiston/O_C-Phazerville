@@ -17,6 +17,7 @@ class BungverbApplet : public HemisphereAudioApplet {
         }
         void Unload() override {
           if (reverb) ReleaseBungverb(reverb);
+          reverb = nullptr;
           AllowRestart();
         }
 
