@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "HSUtils.h"
 #include "OC_DAC.h"
 #include "OC_core.h"
 #include "OC_digital_inputs.h"
@@ -138,6 +139,8 @@ public:
     }
 
     // lower 11 bits of PhzConfig KEY
+    // Audio applet data keys also use 11 bits, with the upper 3 being non-zero...
+    // - watch out for collisions, especially on Preset A (index 0)
     enum PresetDataKeys : uint16_t {
         APPLET_METADATA_KEY = 0, // applet ids
         CLOCK_DATA_KEY = 1,
@@ -166,12 +169,20 @@ public:
         MIDI_MAPS_KEY   = 150, // + 0..32
 
         // 200s = Quantizers
-        Q_ENGINE_KEY    = 200, // + slot number
+        Q_ENGINE_KEY    = 200, // + slot number (200 - 207)
 
-        // 300-500 = Sequences (aka Patterns)
+        // 256 = used by Audio Applets
+
+        // 300-428 = Sequences (aka Patterns)
         SEQUENCES_KEY   = 300, // + blob index
 
-        VERSION_KEY = 0xFFFF
+        // More ranges used by Audio Applet data:
+        // 512-522
+        // 768-778
+        // 1024+
+        // ... check AudioAppletSubapp to be sure!
+
+        VERSION_KEY = 0xFFFF // 65535
     };
 
     void DeletePreset(int id) {
@@ -180,6 +191,8 @@ public:
         for (int i = 0; i < 100; ++i) {
           PhzConfig::deleteKey(preset_key | i);
         }
+        // TODO:
+        //audio_app.deletePresetData(id);
     }
 
     void StoreToPreset(int id) {
@@ -1538,9 +1551,8 @@ private:
 
         if (config_cursor == PRESET_JUMP_TRIG) {
           int y = 45;
-          gfxPrint(18, y, "Jump Trig: ");
-          int x = graphics.getPrintPosX();
-          gfxPrint(jump_trig_);
+          int x = 100;
+          gfxPrint(18, y, "Jump Trig:");
           int w = strlen(jump_trig_.InputName()) * 6 + 2;
           CONSTRAIN(x, 3, 126-w);
 
@@ -1548,9 +1560,13 @@ private:
           gfxFrame(x - 1, y - 1, w + 1, 11);
           gfxPrint(x, y + 1, jump_trig_.InputName());
           if (EditMode()) gfxInvert(x - 1, y - 1, w + 1, 11);
+
+          gfxIcon(x - 8, y, RIGHT_ICON);
         } else {
           gfxPrint(1, 45, "Preset Bank#  ");
           gfxPrint(bank_num);
+          gfxPrint("  ");
+          gfxPrint(jump_trig_);
         }
 
         const uint8_t pc_ch = HS::frame.MIDIState.pc_channel;
@@ -1707,6 +1723,9 @@ void QUADRANTS_screensaver() {
         break;
     case SCREEN_METERS: // Meters
         quad_manager.BaseScreensaver(true); // show note names
+        break;
+    case SCREEN_BEATS:
+        BeatCounterScreensaver();
         break;
     default: break; // blank screen
     }

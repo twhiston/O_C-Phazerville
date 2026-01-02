@@ -81,9 +81,6 @@ public:
 
   void Controller() {
     AudioNoInterrupts();
-    // Call Controller instead of BaseController so we don't trigger
-    // cursor_countdown multiple times. This is a stupid hack and we should do
-    // something smarter.
     for (size_t i = 0; i < Slots; i++) {
       if (IsStereo(i)) {
         get_selected_stereo_applet(i).Controller();
@@ -468,6 +465,7 @@ public:
     for (uint_fast8_t i = 0; i < APPLET_CONFIG_SIZE; ++i) {
       // We default to 0, so may as well skip them to save space
       if (data[i]) PhzConfig::setValue(key + i, data[i]);
+      else PhzConfig::deleteKey(key + i); // clears old unused data
       Serial.printf(" | data[%u]=", i);
       Serial.print(data[i], HEX);
     }
@@ -515,8 +513,6 @@ private:
   int cursor[2]; // selected slot for each side
   // candidate applet for each side, referenced by index into applets arrays
   int candidate[2];
-
-  int cursor_countdown;
 
   HemisphereAudioApplet& get_mono_applet(
     HEM_SIDE side, size_t slot, size_t ix
