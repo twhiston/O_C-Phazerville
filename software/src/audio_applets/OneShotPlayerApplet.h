@@ -120,15 +120,12 @@ public:
         break;
 
       case ENV_SUSTAIN:
-        // In trigger mode, stay at full level until sample ends
-        // In gate mode, stay at full level while gate is high
+        // Gate mode: release when gate goes low
         if (trig_mode == TRIG_MODE_GATE && !current_gate) {
           env_stage = ENV_RELEASE;
         }
-        // Check if sample finished playing (trigger mode)
-        // Only check after sample has actually started (not while sample_playtrig is pending)
-        if (trig_mode == TRIG_MODE_TRIGGER && !sample_playtrig && !wavplayer.isPlaying()) {
-          // Sample finished naturally, no release needed
+        // When sample finishes, go idle
+        if (!sample_playtrig && !wavplayer.isPlaying()) {
           env_stage = ENV_IDLE;
           env_level = 0.0f;
         }
@@ -161,13 +158,10 @@ public:
         break;
     }
 
-    // Process CV inputs for sample selection
-    // Scale CV input to file count range
+    // Process sample CV - offset the GUI selection
     if (folder_file_count > 0) {
       int cv_sample = sample_cv.InRescaled(folder_file_count);
-      // Use CV if it's connected, otherwise use manual selection
-      sample_index_mod = (sample_cv.source != 0) ? cv_sample : sample_index;
-      sample_index_mod = constrain(sample_index_mod, 0, folder_file_count - 1);
+      sample_index_mod = constrain(sample_index + cv_sample, 0, folder_file_count - 1);
     } else {
       sample_index_mod = 0;
     }
@@ -197,6 +191,7 @@ public:
       ScanFolder();
       folder_changed = false;
       sample_reload = true;
+      loaded_sample_index = -1; // Invalidate so the new folder's sample gets loaded
 
       // Clamp sample_index to valid range for new folder
       if (folder_file_count > 0 && sample_index >= folder_file_count) {
@@ -253,7 +248,6 @@ public:
     graphics.printf("%03u", sample_index_mod);
     gfxEndCursor(cursor == SAMPLE_NUM);
     gfxPrint(wavplayer_ready ? "." : " ");
-
     gfxStartCursor();
     gfxPrint(sample_cv);
     gfxEndCursor(cursor == SAMPLE_CV, false, sample_cv.InputName());
